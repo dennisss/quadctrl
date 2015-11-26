@@ -1,0 +1,15 @@
+eigen/.hg*
+eigen/unsupported
+eigen/cmake
+eigen/bench
+eigen/demos
+eigen/doc
+eigen/test
+eigen/failtest
+eigen/scripts
+eigen/lapack
+eigen/blas
+eigen/debug
+eigen/INSTALL
+CMakeLists.txt
+*.cmake*
