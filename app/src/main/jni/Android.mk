@@ -9,11 +9,12 @@ include $(CLEAR_VARS)
 #include $(EXTERNAL)/opencv/sdk/native/jni/OpenCV.mk
 
 
-LOCAL_MODULE := libquadcopter
+LOCAL_MODULE := libquadctrl
 LOCAL_C_INCLUDES := $(EXTERNAL)/eigen
-LOCAL_SHARED_LIBRARIES := libftdi libusb1.0
+LOCAL_SHARED_LIBRARIES := libftdi libusb1.0 roscpp_android_ndk
 LOCAL_CFLAGS := -std=c++11 -O3
-LOCAL_SRC_FILES := quadcopter.cpp \
+LOCAL_SRC_FILES := node.cpp \
+                   quadcopter.cpp \
                    usb_serial.cpp \
                    motors.cpp \
                    MadgwickAHRS.cpp \
@@ -27,3 +28,6 @@ include $(EXTERNAL)/libusb/Android.mk #android/jni/libusb.mk
 
 # Build libftdi
 include $(EXTERNAL)/libftdi/Android.mk
+
+# Prebuilt ROS packages
+include $(EXTERNAL)/roscpp_android_ndk/Android.mk

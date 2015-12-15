@@ -9,4 +9,11 @@
     android:paddingTop="@dimen/activity_vertical_margin"
     tools:context="me.denniss.quadnode.MainActivity">
 
+    <fragment android:id="@+id/drawer"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:layout_gravity="start"
+        android:name="me.denniss.quadnode.SettingsFragment"
+        tools:layout="@layout/fragment_settings" />
+
 </RelativeLayout>

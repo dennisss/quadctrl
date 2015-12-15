@@ -1,8 +1,8 @@
 
+// NOTE: This currently only supports using a Pro Mini 
+// Motors at 3, 9, 10, 11
 
-// Motors at 5, 6, 10, 11
-
-int pins[] = {5, 6, 10, 11};
+int pins[] = {10, 11, 3, 9};
 #define n 4
 
 #define PWM_LOW 20 // Zero throttle level
@@ -26,14 +26,8 @@ void setup() {
     analogWrite(pins[i], PWM_HIGH);
     delay(1000);
     analogWrite(pins[i], PWM_LOW);
-    delay(1000); 
+    delay(1000);
   }
-  
-  
-  //for(int i = 0; i < 255; i++){
-  //   analogWrite(10, i);
-  //   delay(100);
-  //}
  
  
   Serial.begin(115200);
@@ -41,34 +35,26 @@ void setup() {
     ;
   }
   Serial.setTimeout(1000);
-  
 }
 
 // Call when something bad seems to have happened.
-// This will cut the motor signal and prevent a reset
+// This will cut the motor signal
 void fail(){
   for(int i = 0; i < n; i++)
     digitalWrite(pins[i], LOW);
-  
-  while(1){
-    digitalWrite(LED_BUILTIN, HIGH);
-    delay(1000);
-    digitalWrite(LED_BUILTIN, LOW);
-    delay(1000);
-  } 
 }
 
 byte buffer[n];
 void loop(){
   
   if(Serial.readBytes((char *)buffer, n) != n){
-    fail(); // TODO: Only do this if a connection to the app has already been established
+    fail();
     return;
   }
   
   for(int i = 0; i < n; i++){
     int c = buffer[i];
-    c = PWM_LOW + ((float)(c / 255.0))*(PWM_HIGH - PWM_LOW); // TODO: Make sure this does floating point
+    c = PWM_LOW + ((float)(c / 255.0))*(PWM_HIGH - PWM_LOW);
     analogWrite(pins[i], c);
   }
 }

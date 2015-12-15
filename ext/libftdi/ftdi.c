@@ -108,8 +108,9 @@ int ftdi_init(struct ftdi_context *ftdi)
     ftdi->error_str = NULL;
     ftdi->module_detach_mode = AUTO_DETACH_SIO_MODULE;
 
-    if (libusb_init2(&ftdi->usb_ctx, "/dev/bus/usb") < 0)
-        ftdi_error_return(-3, "libusb_init() failed");
+    // TODO: It is already initialized by usb_serial. Perhaps have usb_serial route everything through libftdi in the case of an ftdi device?
+    //if (libusb_init2(&ftdi->usb_ctx, "/dev/bus/usb") < 0)
+    //    ftdi_error_return(-3, "libusb_init() failed");
 
     ftdi_set_interface(ftdi, INTERFACE_ANY);
     ftdi->bitbang_mode = 1; /* when bitbang is enabled this holds the number of the mode  */

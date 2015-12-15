@@ -1,5 +1,6 @@
 package me.denniss.quadnode;
 
+import android.app.Activity;
 import android.content.Context;
 import android.content.Intent;
 import android.hardware.usb.UsbDevice;
@@ -9,28 +10,27 @@ import android.hardware.usb.UsbInterface;
 import android.hardware.usb.UsbManager;
 import android.os.Bundle;
 import android.util.Log;
+import android.view.WindowManager;
 import android.widget.Toast;
 
-import org.ros.android.RosActivity;
-import org.ros.node.NodeConfiguration;
-import org.ros.node.NodeMainExecutor;
+public class MainActivity extends Activity {
 
-import java.io.FileDescriptor;
-import java.io.FileInputStream;
-import java.io.FileOutputStream;
+    // TODO: Cleanup the connection on both the java and native side
 
-public class MainActivity extends RosActivity {
-
-    public MainActivity(){
-        super("Quadcopter Node", "Quadcopter Node");
-    }
-
-    private static UsbDeviceConnection conn;
+    private static UsbDeviceConnection conn = null;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
+
+        getWindow().addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
+
+
+		ControlNode.init();
+
+
+
 
         Intent intent = getIntent();
 
@@ -59,7 +59,7 @@ public class MainActivity extends RosActivity {
             }
 
 
-            Quadcopter.setup("/dev/bus/usb", device.getVendorId(), device.getProductId(), fd);
+            ControlNode.connectUSB("/dev/bus/usb", device.getVendorId(), device.getProductId(), fd);
 
 
             Toast toast = Toast.makeText(getApplicationContext(), "USB Motors Connected!", Toast.LENGTH_LONG);
@@ -69,16 +69,27 @@ public class MainActivity extends RosActivity {
     }
 
 
+    @Override
+    protected void onDestroy() {
+
+		ControlNode.destroy();
+
+        super.onDestroy();
+    }
+
 
 
     @Override
-    protected void init(NodeMainExecutor nodeMainExecutor) {
+    protected void onStart() {
+        super.onStart();
 
-        Listener l = new Listener();
+        // Start native node
+    }
 
-        NodeConfiguration nodeConfiguration = NodeConfiguration.newPublic(getRosHostname());
-        nodeConfiguration.setMasterUri(getMasterUri());
-        nodeMainExecutor.execute(l, nodeConfiguration);
+    @Override
+    protected void onStop() {
+        super.onStop();
 
+        // Stop native node
     }
 }

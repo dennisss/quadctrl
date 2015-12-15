@@ -14,7 +14,7 @@
 #include <android/looper.h>
 #include <android/sensor.h>
 
-
+#define SENSOR_TYPE_GYROSCOPE_UNCALIBRATED (16)
 
 
 static uint64_t startreal; // The start time relative to epoch
@@ -115,17 +115,17 @@ static int get_sensor_events(int fd, int events, void *data) {
 			lastAccelTime = event.timestamp; // TODO: Are these timestamps monotonic? And are they relative to epoch?
 
 
-			LOGI("A: %llu", event.timestamp);
+			//LOGI("A: %llu", event.timestamp);
 
 		}
-		else if(event.type == ASENSOR_TYPE_GYROSCOPE){
+		else if(event.type == ASENSOR_TYPE_GYROSCOPE || event.type == SENSOR_TYPE_GYROSCOPE_UNCALIBRATED){
 			lastRotat[0] = event.vector.x;
 			lastRotat[1] = event.vector.y;
 			lastRotat[2] = event.vector.z;
 			lastRotatRelTime =  RELATIVE_TIME;
 			lastRotatTime = event.timestamp;
 
-			LOGI("G: %llu", event.timestamp);
+			//LOGI("G: %llu", event.timestamp);
 		}
 
 		/*
@@ -154,7 +154,7 @@ void inertial_init(){
 }
 
 
-void inertial_enable(){
+void inertial_enable(int flags){
 
 	lastAccelTime = 0;
 	lastRotatTime = 0;
@@ -170,7 +170,10 @@ void inertial_enable(){
 
     sensorManager = ASensorManager_getInstance();
 
-    gyroSensor = ASensorManager_getDefaultSensor(sensorManager, ASENSOR_TYPE_GYROSCOPE);
+	if(flags & INERTIAL_FLAG_NO_DRIFT_COMP)
+		gyroSensor = ASensorManager_getDefaultSensor(sensorManager, SENSOR_TYPE_GYROSCOPE_UNCALIBRATED);
+    else
+		gyroSensor = ASensorManager_getDefaultSensor(sensorManager, ASENSOR_TYPE_GYROSCOPE);
     accelSensor = ASensorManager_getDefaultSensor(sensorManager, ASENSOR_TYPE_ACCELEROMETER);
     //magnSensor = ASensorManager_getDefaultSensor(sensorManager, ASENSOR_TYPE_MAGNETIC_FIELD);
 

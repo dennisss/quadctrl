@@ -1,8 +1,10 @@
-
+#include "quadcopter.h"
 #include "inertial.h"
 #include "motors.h"
 #include "log.h"
+#include "node.h"
 
+//#include "MahonyAHRS.h"
 #include "MadgwickAHRS.h"
 
 #include <jni.h>
@@ -19,35 +21,15 @@ using namespace std;
 using namespace Eigen;
 
 
-// Convert Quaternion to euler angles (needed for error representaion)
-// Uses ZYX rotation convention
-static Vector3f to_euler(Quaternionf q){
-    float q0 = q.w(), q1 = q.x(), q2 = q.y(), q3 = q.z();
-    return Vector3f(
-            atan2(2.0f*(q0*q1 + q2*q3), 1 - 2.0f*(q1*q1 + q2*q2)),
-            asin(2.0f*(q0*q2 - q3*q1)),
-            atan2(2.0f*(q0*q3 + q1*q2), 1 - 2.0f*(q2*q2 + q3*q3))
-    );
-}
+static int running = 0;
 
-static Vector3f eulerRate_to_bodyRate(Vector3f e, Vector3f pose){
-    Vector3f b;
-    b.x() = e.x() - sin(pose.y())*e.z();
-    b.y() = cos(pose.x())*e.y() + sin(pose.x())*cos(pose.y())*e.z();
-    b.z() = -sin(pose.x())*e.y() + cos(pose.y())*cos(pose.x())*e.z();
+static float setthrottle;
+static Quaternionf setpoint; // The orientation that should be maintained
 
-    return b;
-/*
-void AC_AttitudeControl::frame_conversion_ef_to_bf(const Vector3f& ef_vector, Vector3f& bf_vector)
-{
-    // convert earth frame rates to body frame rates
-    bf_vector.x = ef_vector.x - _ahrs.sin_pitch() * ef_vector.z;
-    bf_vector.y = _ahrs.cos_roll()  * ef_vector.y + _ahrs.sin_roll() * _ahrs.cos_pitch() * ef_vector.z;
-    bf_vector.z = -_ahrs.sin_roll() * ef_vector.y + _ahrs.cos_pitch() * _ahrs.cos_roll() * ef_vector.z;
-}
+static Vector3f lastE; // Used for computing derivative
+static Vector3f totalE; // Used for tracking the integral
 
- */
-}
+static odometry_listener listener;
 
 Quaternionf getpose(){
     float buf[4];
@@ -55,38 +37,150 @@ Quaternionf getpose(){
     return Quaternionf(buf[0], buf[1], buf[2], buf[3]);
 }
 
-int running = 0;
 
-static float setthrottle;
-Quaternionf setpoint; // The orientation that should be maintained
 
-Vector3f lastE; // Used for computing derivative
-Vector3f totalE; // Used for tracking the integral
+Quadcopter::Quadcopter(){
+
+	running = 0;
+
+}
+
+void Quadcopter::init(){
+
+	inertial_init();
+    inertial_setlistener(sensor_feedback);
+    inertial_enable(0);
+
+}
+
+void Quadcopter::destroy(){
+
+	// Stop listening
+    inertial_disable();
+    inertial_setlistener(NULL);
+
+	//if(motors_initted){
+		motors_destroy();
+	//}
+
+}
+
+
+void Quadcopter::start(){
+	setthrottle = 0.0;
+	setpoint = getpose();
+	lastE = Vector3f(0,0,0);
+	totalE = Vector3f(0,0,0);
+
+	running = 1;
+}
+
+void Quadcopter::stop(){
+	running = 0;
+}
+
+
+void Quadcopter::connectUSB(char *fspath, int usbVendorId, int usbProductId, int fd){
+	motors_init(fspath, usbVendorId, usbProductId, fd);
+}
+
+void Quadcopter::setListener(odometry_listener l){
+    listener = l;
+};
+
+void Quadcopter::setThrottle(float t){
+    setthrottle = t;
+}
+
+
+// Convert Quaternion to euler angles (needed for error representaion)
+// Uses XYZ convention
+static Vector3f to_euler(Quaternionf q){
+    return q.toRotationMatrix().eulerAngles(0, 1, 2); // roll, pitch, yaw
+}
+
+// Convert a euler derivative to a body frame derivative
+static Vector3f eulerRate_to_bodyRate(Vector3f e, Vector3f pose){
+
+	Vector3f out;
+
+    out = (AngleAxisf(pose.x(), Vector3f::UnitX())
+          *AngleAxisf(pose.y(), Vector3f::UnitY()))
+          *Vector3f(0, 0, e.z())
+            +
+          (AngleAxisf(pose.x(), Vector3f::UnitX()))
+          *Vector3f(0, e.y(), 0)
+            +
+          Vector3f(e.x(), 0, 0);
+
+    return out;
+}
+
+
+uint64_t last_time = 0; // TODO: Make sure this resets properly
+
+
 
 void sensor_feedback(float *acc, float* gyro, uint64_t time){
-    MadgwickAHRSupdateIMU(gyro[0], gyro[1], gyro[2], acc[0], acc[1], acc[2]);
+    Matrix3f imu2motors;
+    imu2motors << 1, 0, 0,  // This is for the phone laying down on the quadcopter
+                  0, 1, 0,
+                  0, 0, 1;
 
-    if(!running || setthrottle < 0.0001) {
+
+
+    if(last_time != 0) {
+        float dt = ((uint64_t)(time - last_time)) / 1.0e9;
+
+        MadgwickAHRSupdateIMU(gyro[0], gyro[1], gyro[2], acc[0], acc[1], acc[2], dt);
+    }
+    last_time = time;
+
+
+    // From here on, all rotations are w.r.t the quadcopter/motor frame (x pointing forward, y right)
+	Quaternionf q = Quaternionf(imu2motors)*getpose();
+
+    // Publish pose
+	if(listener != NULL){
+		listener(q, time);
+	}
+
+	// Don't touch the motors if it is not started
+	if(!running)
+		return;
+
+    if(setthrottle < 0.0001) {
         float zero[] = {0,0,0,0};
         motors_set(zero);
         return;
     }
 
-    Quaternionf q = getpose();
 
     // The euler angle error
-    Vector3f e = to_euler(q * setpoint.inverse());
+    //Vector3f e = to_euler(setpoint) - to_euler(q); //to_euler(setpoint * q.inverse());
 
     // Convert error to body-fixed frame
-    e = eulerRate_to_bodyRate(e, to_euler(getpose()));
+    //e = eulerRate_to_bodyRate(e, to_euler(q));
+    //e = Vector3f(e[1], e[2], e[0]); // Switch to roll, pitch, yaw
+
+
+    // Pure quaternion implementation of the error; first the change quaternion is computed and it is converted to an angular velocity vector
+    // This is similar to the approach taken in "Full Quaternion Based Attitude Control for a Quadrotor"
+    Quaternionf qe = setpoint * q.conjugate();
+    if(qe.w() < 0) // Rotation of more than pi radians (meaning the change is not minimal)
+        qe = qe.conjugate();
+
+    Vector3f e = qe.coeffs().segment<3>(0); // extract x,y,z part
+
+    LOGI("%0.4f %0.4f %0.4f", e[0], e[1], e[2]);
 
 
 
     // Weights/gains for PID filter
     // Order: (roll around x), (pitch around y), (yaw around z)
-    Vector3f gP(-1, -1, -1);
+    Vector3f gP(1, 1, 1);
     Vector3f gI(0, 0, 0);
-    Vector3f gD(0, 0, 0);
+    Vector3f gD(0.1, 0.1, 0.1);
 
     float dt = 0.01;
 
@@ -98,30 +192,29 @@ void sensor_feedback(float *acc, float* gyro, uint64_t time){
     // Compute control output (desired angular moments that need to be applied)
     Vector3f control = gP.cwiseProduct(e) + gI.cwiseProduct(totalE) + gD.cwiseProduct(dE);
 
+    // Scaling factor
+    control *= 0.5;
+
 
 
     // Converts a vector represented in the imu frame into the motor frame
     // Note: If the phone is mounted differently, then this should be the only thing that needs to change
-    Matrix3f imu2motors;
-    imu2motors << -1, 0, 0,  // This is for the phone laying down on the quadcopter
-                  0, 1, 0,
-                  0, 0, -1;
-    control = imu2motors * control;
+    //control = imu2motors * control;
 
 
-
-    float throttle = setthrottle; // The desired throttle // TODO: Does this need to be transformed as well?
+    // TODO: For hover, this needs to account for the orientation
+    float throttle = setthrottle; // The desired throttle
 
 
     // Convert to motor speeds
-    float kF = 1.0;
-    float kM = 1.0;
-    float L = 1.0;
+    float kF = 1.0; // Force/Thrust coefficient
+    float kM = 1.0; // Momentum/Torque coefficient
+    float L = 1.0; // Arm length
     float s = sin(M_PI / 4.0), c = cos(M_PI / 4.0);
     Matrix4f dynamics;
     dynamics << kF, kF, kF, kF, // Thrust
             kF*L*c, -kF*L*c, -kF*L*c, kF*L*c, // Roll moment
-            kF*L*s, kF*L*s, -kF*L*s, -kF*L*s, // Pitch moment
+            -kF*L*s, -kF*L*s, kF*L*s, kF*L*s, // Pitch moment
             kM, -kM, kM, -kM; // Yaw moment
 
 
@@ -131,6 +224,10 @@ void sensor_feedback(float *acc, float* gyro, uint64_t time){
     Vector4f m = dynamics.inverse() * d;
 
     float speeds[] = {m[0], m[1], m[2], m[3]};
+
+
+    motor_listener(speeds);
+
 
     motors_set(speeds);
 }
@@ -144,51 +241,10 @@ extern "C" {
 #endif
 
 
-
-JNIEXPORT void Java_me_denniss_quadnode_Quadcopter_setup(JNIEnv *env, jobject obj, jstring jfspath, jint usbVendorId, jint usbProductId, jint fd) {
-
-    char *fspath = (char *) env->GetStringUTFChars(jfspath, NULL);
-    motors_init(fspath, usbVendorId, usbProductId, fd);
-    env->ReleaseStringUTFChars(jfspath, fspath);
-
-    //float buf[] = {0, 1, 1, 1};
-    //for (int i = 0; i < 16; i++) {
-    //    LOGI("Writing to usb...");
-    //    motors_set(buf);
-    //    sleep(1);
-    //}
-
-    inertial_init();
-    inertial_setlistener(sensor_feedback);
-    inertial_enable();
-}
-
-JNIEXPORT void Java_me_denniss_quadnode_Quadcopter_start(JNIEnv *env, jobject obj){
-
-    setthrottle = 0.0;
-    setpoint = getpose();
-    lastE = Vector3f(0,0,0);
-    totalE = Vector3f(0,0,0);
-
-
-    running = 1;
-
-
-}
-
-JNIEXPORT void Java_me_denniss_quadnode_Quadcopter_setthrottle(JNIEnv *env, jobject obj, jfloat throttle){
-    setthrottle = throttle;
-}
-
-JNIEXPORT void Java_me_denniss_quadnode_Quadcopter_stop(JNIEnv *env, jobject obj){
-
-    running = 0;
-
-    //motors_destroy();
-
-    // Stop listening
-    //inertial_disable();
-    //inertial_setlistener(NULL);
+JNIEXPORT void Java_me_denniss_quadnode_Quadcopter_setMotors(JNIEnv *env, jobject obj, jfloatArray speeds){
+    float buf[4];
+    env->GetFloatArrayRegion(speeds, 0, 4, buf);
+    motors_set(buf);
 }
 
 
