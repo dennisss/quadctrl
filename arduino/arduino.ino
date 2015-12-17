@@ -5,8 +5,8 @@
 int pins[] = {10, 11, 3, 9};
 #define n 4
 
-#define PWM_LOW 20 // Zero throttle level
-#define PWM_HIGH 230 // Full throttle level
+#define PWM_LOW 2 // Zero throttle level
+#define PWM_HIGH 253 // Full throttle level
 
 void setup() {
   
@@ -24,24 +24,27 @@ void setup() {
   // Calibrate/arm 
   for(int i = 0; i < n; i++){
     analogWrite(pins[i], PWM_HIGH);
-    delay(1000);
-    analogWrite(pins[i], PWM_LOW);
-    delay(1000);
   }
+  delay(1000);
+
+  for(int i = 0; i < n; i++){
+    analogWrite(pins[i], PWM_LOW);
+  }
+  delay(1000);
  
  
   Serial.begin(115200);
   while(!Serial){ // Wait for serial to be configured
     ;
   }
-  Serial.setTimeout(1000);
+  Serial.setTimeout(100);
 }
 
 // Call when something bad seems to have happened.
 // This will cut the motor signal
 void fail(){
   for(int i = 0; i < n; i++)
-    digitalWrite(pins[i], LOW);
+    digitalWrite(pins[i], PWM_LOW);
 }
 
 byte buffer[n];

@@ -25,9 +25,17 @@ static int running = 0;
 
 static float setthrottle;
 static Quaternionf setpoint; // The orientation that should be maintained
+static Quaternionf joypoint; // The additional rotation requested by a joystick
 
 static Vector3f lastE; // Used for computing derivative
 static Vector3f totalE; // Used for tracking the integral
+
+// Weights/gains for PID filter
+// Order: (roll around x), (pitch around y), (yaw around z)
+static Vector3f gP(1, 1, 0.1);
+static Vector3f gI(0, 0, 0);
+static Vector3f gD(0.01, 0.01, 0);
+
 
 static odometry_listener listener;
 
@@ -69,6 +77,7 @@ void Quadcopter::destroy(){
 void Quadcopter::start(){
 	setthrottle = 0.0;
 	setpoint = getpose();
+    joypoint = Quaternionf(1,0,0,0);
 	lastE = Vector3f(0,0,0);
 	totalE = Vector3f(0,0,0);
 
@@ -90,6 +99,22 @@ void Quadcopter::setListener(odometry_listener l){
 
 void Quadcopter::setThrottle(float t){
     setthrottle = t;
+}
+
+void Quadcopter::joystickInput(Vector3f a){
+
+    Matrix3f m;
+    m = AngleAxisf(a[0], Vector3f::UnitX())
+        * AngleAxisf(a[1],  Vector3f::UnitY())
+        * AngleAxisf(a[2], Vector3f::UnitZ());
+
+    joypoint = Quaternionf(m);
+}
+
+void Quadcopter::setGains(Vector3f p, Vector3f i, Vector3f d){
+	gP = p;
+	gI = i;
+	gD = d;
 }
 
 
@@ -145,6 +170,8 @@ void sensor_feedback(float *acc, float* gyro, uint64_t time){
 		listener(q, time);
 	}
 
+    //setthrottle = 2;
+
 	// Don't touch the motors if it is not started
 	if(!running)
 		return;
@@ -166,21 +193,19 @@ void sensor_feedback(float *acc, float* gyro, uint64_t time){
 
     // Pure quaternion implementation of the error; first the change quaternion is computed and it is converted to an angular velocity vector
     // This is similar to the approach taken in "Full Quaternion Based Attitude Control for a Quadrotor"
-    Quaternionf qe = setpoint * q.conjugate();
+    //Quaternionf qe = (joypoint*setpoint) * q.conjugate();
+    Quaternionf qe = q.conjugate()*setpoint;
+
     if(qe.w() < 0) // Rotation of more than pi radians (meaning the change is not minimal)
         qe = qe.conjugate();
 
+    // Error is in the range -1 to 1 : corresponding to -pi to pi radians (it is the sin(angle/2) which is fairly linear around 0)
     Vector3f e = qe.coeffs().segment<3>(0); // extract x,y,z part
+
 
     LOGI("%0.4f %0.4f %0.4f", e[0], e[1], e[2]);
 
 
-
-    // Weights/gains for PID filter
-    // Order: (roll around x), (pitch around y), (yaw around z)
-    Vector3f gP(1, 1, 1);
-    Vector3f gI(0, 0, 0);
-    Vector3f gD(0.1, 0.1, 0.1);
 
     float dt = 0.01;
 
@@ -189,11 +214,19 @@ void sensor_feedback(float *acc, float* gyro, uint64_t time){
     // Integrate
     totalE += e * dt;
 
+    for(int i = 0; i < 3; i++) {
+        if(totalE[i] > 1)
+            totalE[i] = 1;
+        if(totalE[i] < -1)
+            totalE[i] = -1;
+    }
+
+
     // Compute control output (desired angular moments that need to be applied)
     Vector3f control = gP.cwiseProduct(e) + gI.cwiseProduct(totalE) + gD.cwiseProduct(dE);
 
     // Scaling factor
-    control *= 0.5;
+    control *= 0.3;
 
 
 
@@ -202,8 +235,11 @@ void sensor_feedback(float *acc, float* gyro, uint64_t time){
     //control = imu2motors * control;
 
 
-    // TODO: For hover, this needs to account for the orientation
-    float throttle = setthrottle; // The desired throttle
+    // Compute angle between vertical and adjust thrust
+    float cost = Vector3f(0,0,1).dot(q._transformVector(Vector3f(0,0,1)));
+    float throttle = setthrottle / cost; // The desired throttle
+
+
 
 
     // Convert to motor speeds

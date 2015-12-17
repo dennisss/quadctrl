@@ -1,5 +1,8 @@
 #include <jni.h>
 
+#include <string>
+#include <vector>
+
 #include "ros/ros.h"
 #include "geometry_msgs/PoseStamped.h"
 #include "geometry_msgs/Twist.h"
@@ -7,6 +10,9 @@
 
 #include "quadcopter.h"
 #include "log.h"
+
+using namespace std;
+
 
 ros::NodeHandle *handle;
 ros::AsyncSpinner *spinner;
@@ -64,6 +70,7 @@ void pose_listener(Quaternionf q, uint64_t time){
 void setpose_callback(const geometry_msgs::Twist::ConstPtr &msg) {
     //ROS_INFO("I heard: [%s]", msg->data.c_str());
 	quad.setThrottle((float) msg->linear.z);
+	quad.joystickInput(Vector3f(msg->angular.x, msg->angular.y, msg->angular.z));
 	LOGI("Set throttle %f", msg->linear.z);
 }
 
@@ -80,13 +87,26 @@ jint JNI_OnLoad(JavaVM *vm, void *reserved) {
 
 const char *node_name = "quadctrl";
 
-JNIEXPORT void JNICALL Java_me_denniss_quadnode_ControlNode_init(JNIEnv *env, jobject obj) {
+JNIEXPORT void JNICALL Java_me_denniss_quadnode_ControlNode_init(JNIEnv *env, jobject obj, jstring jmaster, jstring jip) {
 
     int argc = 3;
     // TODO: don't hardcode ip addresses
-    char *argv[] = {"..." , "__master:=http://192.168.0.194:11311", "__ip:=192.168.0.32"}; //, "cmd_vel:=navigation_velocity_smoother/raw_cmd_vel"};
+    const char *argv[] = {"..." , NULL, NULL};
 
-    ros::init(argc, &argv[0], node_name);
+	const char *master = env->GetStringUTFChars(jmaster, JNI_FALSE);
+	const char *ip = env->GetStringUTFChars(jip, JNI_FALSE);
+
+	string masterParam = string("__master:=") + master;
+	string ipParam = string("__ip:=") + ip;
+
+	env->ReleaseStringUTFChars(jmaster, master);
+	env->ReleaseStringUTFChars(jip, ip);
+
+	argv[1] = masterParam.c_str();
+	argv[2] = ipParam.c_str();
+
+	// TODO: Clean up this cast
+    ros::init(argc, (char **)&argv[0], node_name);
     handle = new ros::NodeHandle();
 
     pose_pub = handle->advertise<geometry_msgs::PoseStamped>("/pose", 1000);
@@ -94,8 +114,8 @@ JNIEXPORT void JNICALL Java_me_denniss_quadnode_ControlNode_init(JNIEnv *env, jo
 
     set_sub = handle->subscribe("/setpoint", 1000, setpose_callback);
 
-	spinner = new ros::AsyncSpinner(1);
 
+	spinner = new ros::AsyncSpinner(1);
 	spinner->start();
 
 
@@ -114,6 +134,17 @@ JNIEXPORT void JNICALL Java_me_denniss_quadnode_ControlNode_destroy(JNIEnv *env,
 
 
 JNIEXPORT void JNICALL Java_me_denniss_quadnode_ControlNode_start(JNIEnv *env, jobject obj) {
+	vector<float> gP, gI, gD;
+	if(handle->getParam("/gains/p", gP)
+	   && handle->getParam("/gains/i", gI)
+	   && handle->getParam("/gains/d", gD)){
+		quad.setGains(
+			Vector3f(gP[0], gP[1], gP[2]),
+			Vector3f(gI[0], gI[1], gI[2]),
+			Vector3f(gD[0], gD[1], gD[2])
+		);
+	}
+
 	quad.start();
 }
 

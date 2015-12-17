@@ -6,7 +6,7 @@ public class ControlNode {
         System.loadLibrary("quadctrl");
     }
 
-	public static native void init();
+	public static native void init(String master, String ip);
 	public static native void destroy();
 
 

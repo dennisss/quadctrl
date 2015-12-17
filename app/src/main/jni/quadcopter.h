@@ -30,9 +30,14 @@ public:
 
 	void setThrottle(float t);
 
+	// Angular joystick input
+	void joystickInput(Vector3f a);
+
+
 	void setListener(odometry_listener l);
 
 
+	void setGains(Vector3f p, Vector3f i, Vector3f d);
 
 
 
