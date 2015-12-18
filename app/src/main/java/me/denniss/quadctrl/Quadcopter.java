@@ -1,4 +1,4 @@
-package me.denniss.quadnode;
+package me.denniss.quadctrl;
 
 /**
  * Created by dennis on 11/24/15.

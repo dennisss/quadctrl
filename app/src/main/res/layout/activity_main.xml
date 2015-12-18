@@ -7,13 +7,13 @@
     android:paddingLeft="@dimen/activity_horizontal_margin"
     android:paddingRight="@dimen/activity_horizontal_margin"
     android:paddingTop="@dimen/activity_vertical_margin"
-    tools:context="me.denniss.quadnode.MainActivity">
+    tools:context="me.denniss.quadctrl.MainActivity">
 
     <fragment android:id="@+id/drawer"
         android:layout_width="match_parent"
         android:layout_height="match_parent"
         android:layout_gravity="start"
-        android:name="me.denniss.quadnode.SettingsFragment"
+        android:name="me.denniss.quadctrl.SettingsFragment"
         tools:layout="@layout/fragment_settings" />
 
 </RelativeLayout>

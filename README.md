@@ -1,5 +1,5 @@
-QuadNode
-========
+Quadcopter Controller
+=====================
 
 - Disclaimer: this is active research code; safety and functionality are not guranteed. Please observe caution while testing.
 - Android Phone powered Quadcopter (with ROS for remote control)

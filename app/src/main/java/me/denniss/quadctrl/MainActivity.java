@@ -1,4 +1,4 @@
-package me.denniss.quadnode;
+package me.denniss.quadctrl;
 
 import android.app.Activity;
 import android.content.Context;
