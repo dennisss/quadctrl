@@ -6,7 +6,7 @@
     android:layout_margin="30px"
     android:orientation="vertical">
 
-
+    <!--
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
@@ -85,8 +85,6 @@
 
     </LinearLayout>
 
-
-
     <Button
         android:layout_height="wrap_content"
         android:layout_width="wrap_content"
@@ -101,7 +99,7 @@
         android:layout_gravity="right"
         android:text="Zero"
         android:id="@+id/zeroBtn" />
-
+    -->
 
     <Button
         android:layout_height="wrap_content"
@@ -115,6 +113,13 @@
         android:layout_gravity="left"
         android:text="Stop"
         android:id="@+id/stopBtn" />
+
+    <Button
+        android:layout_height="wrap_content"
+        android:layout_width="wrap_content"
+        android:layout_gravity="left"
+        android:text="Calibrate"
+        android:id="@+id/calibBtn" />
 
 
 </LinearLayout>

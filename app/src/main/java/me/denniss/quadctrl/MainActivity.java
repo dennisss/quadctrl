@@ -1,6 +1,9 @@
 package me.denniss.quadctrl;
 
+import android.app.ActionBar;
 import android.app.Activity;
+import android.app.Fragment;
+import android.app.FragmentManager;
 import android.content.Context;
 import android.content.Intent;
 import android.hardware.usb.UsbDevice;
@@ -10,6 +13,7 @@ import android.hardware.usb.UsbInterface;
 import android.hardware.usb.UsbManager;
 import android.net.wifi.WifiManager;
 import android.os.Bundle;
+import android.support.v4.widget.DrawerLayout;
 import android.util.Log;
 import android.view.WindowManager;
 import android.widget.Toast;
@@ -19,7 +23,22 @@ import java.net.InetAddress;
 import java.net.UnknownHostException;
 import java.nio.ByteOrder;
 
-public class MainActivity extends Activity {
+public class MainActivity extends Activity
+        implements NavigationDrawerFragment.NavigationDrawerCallbacks{
+
+
+    /**
+     * Fragment managing the behaviors, interactions and presentation of the navigation drawer.
+     */
+    private NavigationDrawerFragment mNavigationDrawerFragment;
+
+    /**
+     * Used to store the last screen title. For use in {@link #restoreActionBar()}.
+     */
+    private CharSequence mTitle;
+
+
+
 
     // TODO: Cleanup the connection on both the java and native side
 
@@ -29,6 +48,21 @@ public class MainActivity extends Activity {
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
+
+        mNavigationDrawerFragment = (NavigationDrawerFragment)
+                getFragmentManager().findFragmentById(R.id.navigation_drawer);
+        //mTitle = getTitle();
+
+        // Set up the drawer.
+        mNavigationDrawerFragment.setUp(
+                R.id.navigation_drawer,
+                (DrawerLayout) findViewById(R.id.drawer_layout));
+
+
+
+
+
+
 
         getWindow().addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
 
@@ -75,6 +109,36 @@ public class MainActivity extends Activity {
             toast.show();
         }
 
+    }
+
+
+
+
+
+    @Override
+    public void onNavigationDrawerItemSelected(int position) {
+
+        Fragment f = null;
+
+        switch (position){
+            case 0: // Settings
+                f = new SettingsFragment();
+                break;
+        }
+
+        if(f == null)
+            return;
+
+        FragmentManager fragmentManager = getFragmentManager();
+        fragmentManager.beginTransaction()
+                .replace(R.id.container, f).commit();
+    }
+
+    public void restoreActionBar() {
+        ActionBar actionBar = getActionBar();
+        actionBar.setNavigationMode(ActionBar.NAVIGATION_MODE_STANDARD);
+        actionBar.setDisplayShowTitleEnabled(true);
+        actionBar.setTitle(mTitle);
     }
 
 

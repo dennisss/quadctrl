@@ -27,6 +27,8 @@ static float setthrottle;
 static Quaternionf setpoint; // The orientation that should be maintained
 static Quaternionf joypoint; // The additional rotation requested by a joystick
 
+static Vector3f gyro_bias(0,0,0);
+
 static Vector3f lastE; // Used for computing derivative
 static Vector3f totalE; // Used for tracking the integral
 
@@ -75,7 +77,7 @@ void Quadcopter::destroy(){
 
 
 void Quadcopter::start(){
-	setthrottle = 0.0;
+	setthrottle = 0;
 	setpoint = getpose();
     joypoint = Quaternionf(1,0,0,0);
 	lastE = Vector3f(0,0,0);
@@ -86,6 +88,27 @@ void Quadcopter::start(){
 
 void Quadcopter::stop(){
 	running = 0;
+}
+
+static int npoints = 0;
+void calibration_feedback(float *acc, float* gyro, uint64_t time) {
+    gyro_bias += Vector3f(gyro[0], gyro[1], gyro[2]);
+    npoints++;
+}
+
+void Quadcopter::calibrate(){
+    sleep(1);
+
+    gyro_bias = Vector3f(0,0,0);
+    npoints = 0;
+    inertial_setlistener(calibration_feedback);
+    sleep(4);
+    inertial_setlistener(sensor_feedback);
+
+    gyro_bias /= npoints;
+
+    LOGI("Biases: %.2f %.2f %.2f", gyro_bias[0], gyro_bias[1], gyro_bias[2]);
+
 }
 
 
@@ -148,14 +171,25 @@ uint64_t last_time = 0; // TODO: Make sure this resets properly
 
 void sensor_feedback(float *acc, float* gyro, uint64_t time){
     Matrix3f imu2motors;
+
+    imu2motors << 0, 0, 1, // For the phone vertically
+                  0, 1, 0,
+                  -1, 0, 0;
+
+
+    /*
     imu2motors << 1, 0, 0,  // This is for the phone laying down on the quadcopter
                   0, 1, 0,
                   0, 0, 1;
-
+    */
 
 
     if(last_time != 0) {
         float dt = ((uint64_t)(time - last_time)) / 1.0e9;
+
+        gyro[0] -= gyro_bias[0];
+        gyro[1] -= gyro_bias[1];
+        gyro[2] -= gyro_bias[2];
 
         MadgwickAHRSupdateIMU(gyro[0], gyro[1], gyro[2], acc[0], acc[1], acc[2], dt);
     }
@@ -163,7 +197,7 @@ void sensor_feedback(float *acc, float* gyro, uint64_t time){
 
 
     // From here on, all rotations are w.r.t the quadcopter/motor frame (x pointing forward, y right)
-	Quaternionf q = Quaternionf(imu2motors)*getpose();
+	Quaternionf q = getpose()*Quaternionf(imu2motors);
 
     // Publish pose
 	if(listener != NULL){
@@ -191,10 +225,13 @@ void sensor_feedback(float *acc, float* gyro, uint64_t time){
     //e = Vector3f(e[1], e[2], e[0]); // Switch to roll, pitch, yaw
 
 
+    // The setpoint needs to be converted to body axes, TODO: Do this in start()
+    Quaternionf target = setpoint * Quaternionf(imu2motors);
+
     // Pure quaternion implementation of the error; first the change quaternion is computed and it is converted to an angular velocity vector
     // This is similar to the approach taken in "Full Quaternion Based Attitude Control for a Quadrotor"
     //Quaternionf qe = (joypoint*setpoint) * q.conjugate();
-    Quaternionf qe = q.conjugate()*setpoint;
+    Quaternionf qe = q.conjugate() * target; // *setpoint;
 
     if(qe.w() < 0) // Rotation of more than pi radians (meaning the change is not minimal)
         qe = qe.conjugate();

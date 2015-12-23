@@ -20,4 +20,6 @@ public class ControlNode {
 	public static native void stop();
 
 
+	public static native void calibrate();
+
 }

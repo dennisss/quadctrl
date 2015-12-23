@@ -11,8 +11,8 @@ rospy.init_node('robot_ctrl', anonymous=True)
 pub = rospy.Publisher('/setpoint', Twist, queue_size=1)
 
 
-rospy.set_param('gains/p', [12, 12, 12])
-rospy.set_param('gains/i', [0, 0, 0])
+rospy.set_param('gains/p', [10, 10, 10])
+rospy.set_param('gains/i', [4, 4, 0])
 rospy.set_param('gains/d', [0, 0, 0])
 
 

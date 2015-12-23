@@ -1,5 +1,7 @@
 package me.denniss.quadctrl;
 
+import android.app.ProgressDialog;
+import android.os.AsyncTask;
 import android.os.Bundle;
 import android.app.Fragment;
 import android.view.LayoutInflater;
@@ -26,6 +28,7 @@ public class SettingsFragment extends Fragment {
     public void onViewCreated(View view, Bundle savedInstanceState) {
         super.onViewCreated(view, savedInstanceState);
 
+        /*
         int[] ids = new int[]{ R.id.seekBar, R.id.seekBar2, R.id.seekBar3, R.id.seekBar4 };
 
         final SeekBar[] bars = new SeekBar[ids.length];
@@ -64,6 +67,7 @@ public class SettingsFragment extends Fragment {
                 Quadcopter.setMotors(speeds);
             }
         });
+        */
 
         Button startBtn = (Button) view.findViewById(R.id.startBtn);
         startBtn.setOnClickListener(new View.OnClickListener() {
@@ -78,6 +82,28 @@ public class SettingsFragment extends Fragment {
             @Override
             public void onClick(View v) {
                 ControlNode.stop();
+            }
+        });
+
+
+        Button calibBtn = (Button) view.findViewById(R.id.calibBtn);
+        calibBtn.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                final ProgressDialog dialog = ProgressDialog.show(SettingsFragment.this.getActivity(), "Calibrating", "Please keep your device still", true);
+
+                new AsyncTask<Void, Void, Void>() {
+
+                    protected Void doInBackground(Void... arg0) {
+                        ControlNode.calibrate();
+                        return null;
+                    }
+
+                    protected void onPostExecute(Void result) {
+                        dialog.dismiss();
+                    }
+                }.execute();
+
             }
         });
 

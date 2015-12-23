@@ -27,6 +27,8 @@ public:
 
 	void stop();
 
+	// Can be called any time after init
+	void calibrate();
 
 	void setThrottle(float t);
 

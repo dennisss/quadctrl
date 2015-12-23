@@ -87,7 +87,7 @@ jint JNI_OnLoad(JavaVM *vm, void *reserved) {
 
 const char *node_name = "quadctrl";
 
-JNIEXPORT void JNICALL Java_me_denniss_quadnode_ControlNode_init(JNIEnv *env, jobject obj, jstring jmaster, jstring jip) {
+JNIEXPORT void JNICALL Java_me_denniss_quadctrl_ControlNode_init(JNIEnv *env, jobject obj, jstring jmaster, jstring jip) {
 
     int argc = 3;
     // TODO: don't hardcode ip addresses
@@ -124,7 +124,7 @@ JNIEXPORT void JNICALL Java_me_denniss_quadnode_ControlNode_init(JNIEnv *env, jo
 
 }
 
-JNIEXPORT void JNICALL Java_me_denniss_quadnode_ControlNode_destroy(JNIEnv *env, jobject obj) {
+JNIEXPORT void JNICALL Java_me_denniss_quadctrl_ControlNode_destroy(JNIEnv *env, jobject obj) {
 	spinner->stop();
 	delete spinner;
 	delete handle;
@@ -133,7 +133,7 @@ JNIEXPORT void JNICALL Java_me_denniss_quadnode_ControlNode_destroy(JNIEnv *env,
 
 
 
-JNIEXPORT void JNICALL Java_me_denniss_quadnode_ControlNode_start(JNIEnv *env, jobject obj) {
+JNIEXPORT void JNICALL Java_me_denniss_quadctrl_ControlNode_start(JNIEnv *env, jobject obj) {
 	vector<float> gP, gI, gD;
 	if(handle->getParam("/gains/p", gP)
 	   && handle->getParam("/gains/i", gI)
@@ -148,12 +148,16 @@ JNIEXPORT void JNICALL Java_me_denniss_quadnode_ControlNode_start(JNIEnv *env, j
 	quad.start();
 }
 
-JNIEXPORT void JNICALL Java_me_denniss_quadnode_ControlNode_stop(JNIEnv *env, jobject obj) {
+JNIEXPORT void JNICALL Java_me_denniss_quadctrl_ControlNode_stop(JNIEnv *env, jobject obj) {
 	quad.stop();
 }
 
+JNIEXPORT void JNICALL Java_me_denniss_quadctrl_ControlNode_calibrate(JNIEnv *env, jobject obj) {
+	quad.calibrate();
+}
 
-JNIEXPORT void JNICALL Java_me_denniss_quadnode_ControlNode_connectUSB(JNIEnv *env, jobject obj, jstring jfspath, jint usbVendorId, jint usbProductId, jint fd) {
+
+JNIEXPORT void JNICALL Java_me_denniss_quadctrl_ControlNode_connectUSB(JNIEnv *env, jobject obj, jstring jfspath, jint usbVendorId, jint usbProductId, jint fd) {
 
 	char *fspath = (char *) env->GetStringUTFChars(jfspath, NULL);
 	quad.connectUSB(fspath, usbVendorId, usbProductId, fd);
