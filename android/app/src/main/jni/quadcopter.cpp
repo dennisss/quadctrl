@@ -4,7 +4,9 @@
 #include "log.h"
 #include "node.h"
 
-//#include "MahonyAHRS.h"
+#include "model.h"
+#include "attitude_ctrl.h"
+
 #include "MadgwickAHRS.h"
 
 #include <jni.h>
@@ -20,10 +22,11 @@ using namespace std;
 using namespace Eigen;
 
 
-static int running = 0;
+static AttitudeControl attCtrl;
+static Model model;
 
-static float setthrottle;
-//static Quaternionf setpoint; // The orientation that should be maintained
+
+static int running = 0;
 static Quaternionf joypoint; // The additional rotation requested by a joystick
 
 static Vector3f gyro_bias(0,0,0);
@@ -32,15 +35,36 @@ static Vector3f gyro_bias(0,0,0);
 
 static odometry_listener listener;
 
-Quaternionf getpose(){
+static Matrix3f imu2motors;
+
+
+Quaternionf get_inertial_pose(){
     float buf[4];
     MadgwickAHRSgetquaternion(buf);
-    return Quaternionf(buf[0], buf[1], buf[2], buf[3]);
+    return Quaternionf(buf[0], buf[1], buf[2], buf[3]) * imu2motors;
+}
+
+Quaternionf get_motor_pose(){
+    return get_inertial_pose()*Quaternionf(imu2motors);
 }
 
 
 
+
 Quadcopter::Quadcopter(){
+
+    imu2motors << 0, 0, 1, // For the phone vertically
+                  0, 1, 0,
+                  -1, 0, 0;
+
+
+    /*
+    imu2motors << 1, 0, 0,  // This is for the phone laying down on the quadcopter
+                  0, 1, 0,
+                  0, 0, 1;
+    */
+
+
 
 	running = 0;
 
@@ -68,11 +92,10 @@ void Quadcopter::destroy(){
 
 
 void Quadcopter::start(){
-	setthrottle = 0;
-	setpoint = getpose();
+
+    attCtrl.set(0, get_motor_pose());
+
     joypoint = Quaternionf(1,0,0,0);
-	lastE = Vector3f(0,0,0);
-	totalE = Vector3f(0,0,0);
 
 	running = 1;
 }
@@ -112,7 +135,7 @@ void Quadcopter::setListener(odometry_listener l){
 };
 
 void Quadcopter::setThrottle(float t){
-    setthrottle = t;
+    attCtrl.set(t);
 }
 
 void Quadcopter::joystickInput(Vector3f a){
@@ -132,65 +155,12 @@ void Quadcopter::setGains(Vector3f p, Vector3f i, Vector3f d){
 }
 
 
-// Convert Quaternion to euler angles (needed for error representaion)
-// Uses XYZ convention
-static Vector3f to_euler(Quaternionf q){
-    return q.toRotationMatrix().eulerAngles(0, 1, 2); // roll, pitch, yaw
-}
 
-// Convert a euler derivative to a body frame derivative
-static Vector3f eulerRate_to_bodyRate(Vector3f e, Vector3f pose){
-
-	Vector3f out;
-
-    out = (AngleAxisf(pose.x(), Vector3f::UnitX())
-          *AngleAxisf(pose.y(), Vector3f::UnitY()))
-          *Vector3f(0, 0, e.z())
-            +
-          (AngleAxisf(pose.x(), Vector3f::UnitX()))
-          *Vector3f(0, e.y(), 0)
-            +
-          Vector3f(e.x(), 0, 0);
-
-    return out;
-}
-
-
-uint64_t last_time = 0; // TODO: Make sure this resets properly
-
-
+static uint64_t last_time = 0; // TODO: Make sure this resets properly
 
 void sensor_feedback(float *acc, float* gyro, uint64_t time){
 
-
-
-
-    float speeds[] = {m[0], m[1], m[2], m[3]};
-
-
-    motor_listener(speeds);
-
-
-    motors_set(speeds);
-
-}
-
-void run(){
-
-    Matrix3f imu2motors;
-
-    imu2motors << 0, 0, 1, // For the phone vertically
-                  0, 1, 0,
-                  -1, 0, 0;
-
-
-    /*
-    imu2motors << 1, 0, 0,  // This is for the phone laying down on the quadcopter
-                  0, 1, 0,
-                  0, 0, 1;
-    */
-
-
+    // Update state
     if(last_time != 0) {
         float dt = ((uint64_t)(time - last_time)) / 1.0e9;
 
@@ -203,15 +173,10 @@ void run(){
     last_time = time;
 
 
-    // From here on, all rotations are w.r.t the quadcopter/motor frame (x pointing forward, y right)
-	Quaternionf q = getpose()*Quaternionf(imu2motors);
-
     // Publish pose
 	if(listener != NULL){
-		listener(q, time);
+		listener(get_motor_pose(), time);
 	}
-
-    //setthrottle = 2;
 
 	// Don't touch the motors if it is not started
 	if(!running)
@@ -224,26 +189,17 @@ void run(){
     }
 
 
-	// TODO : TODO: Make sure the state is converted by
-	// The setpoint needs to be converted to body axes, TODO: Do this in start()
-	//Quaternionf target = setpoint * Quaternionf(imu2motors);
-	// Before being sent to compute
+
+    // Prepare state
+    State s;
+    s.orientation = get_motor_pose();
+    s.omega = Vector3d(gyro[0], gyro[1], gyro[2]);
+
+    // Compute the necessary control response
+    Vector4d m = model.to_motors( attCtrl.compute(s) );
+
+    // Set the motors
+    float speeds[] = {m[0], m[1], m[2], m[3]};
+    motor_listener(speeds);
+    motors_set(speeds);
 }
-
-
-
-#ifdef __cplusplus
-extern "C" {
-#endif
-
-
-JNIEXPORT void Java_me_denniss_quadnode_Quadcopter_setMotors(JNIEnv *env, jobject obj, jfloatArray speeds){
-    float buf[4];
-    env->GetFloatArrayRegion(speeds, 0, 4, buf);
-    motors_set(buf);
-}
-
-
-#ifdef __cplusplus
-}
-#endif

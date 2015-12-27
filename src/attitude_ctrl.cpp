@@ -32,8 +32,6 @@ Vector4d AttitudeControl::compute(const State &s){
 	Vector3d e = qe.coeffs().segment<3>(0); // extract x,y,z part
 
 
-	//   LOGI("%0.4f %0.4f %0.4f", e[0], e[1], e[2]);
-
 
 
 	double dt = 0.001; //0.01;
@@ -55,15 +53,6 @@ Vector4d AttitudeControl::compute(const State &s){
 	// Compute control output (desired angular moments that need to be applied)
 	Vector3d control = gP.cwiseProduct(e) + gI.cwiseProduct(totalE) + gD.cwiseProduct( -s.omega /* dE */);
 
-	// Scaling factor
-	//control *= 0.3;
-
-
-
-	// Converts a vector represented in the imu frame into the motor frame
-	// Note: If the phone is mounted differently, then this should be the only thing that needs to change
-	//control = imu2motors * control;
-
 
 	// Compute angle between vertical and adjust thrust
 //	double cost = Vector3f(0,0,1).dot(q._transformVector(Vector3f(0,0,1)));
@@ -78,4 +67,7 @@ Vector4d AttitudeControl::compute(const State &s){
 void AttitudeControl::set(double thrust, Quaterniond orient){
 	this->setthrust = thrust;
 	this->setpoint = orient;
+
+	lastE = Vector3d(0,0,0);
+	totalE = Vector3d(0,0,0);
 }

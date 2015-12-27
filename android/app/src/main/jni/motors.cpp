@@ -37,7 +37,13 @@ void motors_set(float *speeds){
 
     // Convert to byte size
     for(int i = 0; i < 4; i++){
-        buf[i] = 255*speeds[i];
+        float s = speeds[i];
+        if(s > 1)
+            s = 1;
+        else if(s < 0)
+            s = 0;
+
+        buf[i] = 255*s;
     }
 
     int r = usb_serial_write(buf, 4);

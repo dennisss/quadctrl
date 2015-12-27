@@ -3,7 +3,7 @@ package me.denniss.quadctrl;
 public class ControlNode {
 
     static {
-        System.loadLibrary("quadctrl");
+        System.loadLibrary("quadphone");
     }
 
 	public static native void init(String master, String ip);
@@ -21,5 +21,8 @@ public class ControlNode {
 
 
 	public static native void calibrate();
+
+
+	public static native void setMotors(float[] speeds);
 
 }

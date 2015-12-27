@@ -50,7 +50,7 @@ public class SettingsFragment extends Fragment {
                     speeds[i] = ((float)bars[i].getProgress()) / 100.0f;
                 }
 
-                Quadcopter.setMotors(speeds);
+                ControlNode.setMotors(speeds);
             }
         });
 
@@ -64,7 +64,7 @@ public class SettingsFragment extends Fragment {
                     bars[i].setProgress(0);
                 }
 
-                Quadcopter.setMotors(speeds);
+                ControlNode.setMotors(speeds);
             }
         });
         */

@@ -10,6 +10,7 @@
 
 #include "quadcopter.h"
 #include "log.h"
+#include "motors.h"
 
 using namespace std;
 
@@ -164,6 +165,13 @@ JNIEXPORT void JNICALL Java_me_denniss_quadctrl_ControlNode_connectUSB(JNIEnv *e
 	env->ReleaseStringUTFChars(jfspath, fspath);
 
 }
+
+JNIEXPORT void Java_me_denniss_quadctrl_ControlNode_setMotors(JNIEnv *env, jobject obj, jfloatArray speeds){
+    float buf[4];
+    env->GetFloatArrayRegion(speeds, 0, 4, buf);
+    motors_set(buf);
+}
+
 
 
 #ifdef __cplusplus
