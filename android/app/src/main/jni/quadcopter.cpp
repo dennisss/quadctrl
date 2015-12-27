@@ -12,7 +12,6 @@
 #include <stdio.h>
 #include <unistd.h>
 #include <string>
-#include <cmath>
 
 #include <Eigen/Dense>
 #include <Eigen/Geometry>
@@ -24,19 +23,11 @@ using namespace Eigen;
 static int running = 0;
 
 static float setthrottle;
-static Quaternionf setpoint; // The orientation that should be maintained
+//static Quaternionf setpoint; // The orientation that should be maintained
 static Quaternionf joypoint; // The additional rotation requested by a joystick
 
 static Vector3f gyro_bias(0,0,0);
 
-static Vector3f lastE; // Used for computing derivative
-static Vector3f totalE; // Used for tracking the integral
-
-// Weights/gains for PID filter
-// Order: (roll around x), (pitch around y), (yaw around z)
-static Vector3f gP(1, 1, 0.1);
-static Vector3f gI(0, 0, 0);
-static Vector3f gD(0.01, 0.01, 0);
 
 
 static odometry_listener listener;
@@ -170,6 +161,22 @@ uint64_t last_time = 0; // TODO: Make sure this resets properly
 
 
 void sensor_feedback(float *acc, float* gyro, uint64_t time){
+
+
+
+
+    float speeds[] = {m[0], m[1], m[2], m[3]};
+
+
+    motor_listener(speeds);
+
+
+    motors_set(speeds);
+
+}
+
+void run(){
+
     Matrix3f imu2motors;
 
     imu2motors << 0, 0, 1, // For the phone vertically
@@ -217,95 +224,11 @@ void sensor_feedback(float *acc, float* gyro, uint64_t time){
     }
 
 
-    // The euler angle error
-    //Vector3f e = to_euler(setpoint) - to_euler(q); //to_euler(setpoint * q.inverse());
-
-    // Convert error to body-fixed frame
-    //e = eulerRate_to_bodyRate(e, to_euler(q));
-    //e = Vector3f(e[1], e[2], e[0]); // Switch to roll, pitch, yaw
-
-
-    // The setpoint needs to be converted to body axes, TODO: Do this in start()
-    Quaternionf target = setpoint * Quaternionf(imu2motors);
-
-    // Pure quaternion implementation of the error; first the change quaternion is computed and it is converted to an angular velocity vector
-    // This is similar to the approach taken in "Full Quaternion Based Attitude Control for a Quadrotor"
-    //Quaternionf qe = (joypoint*setpoint) * q.conjugate();
-    Quaternionf qe = q.conjugate() * target; // *setpoint;
-
-    if(qe.w() < 0) // Rotation of more than pi radians (meaning the change is not minimal)
-        qe = qe.conjugate();
-
-    // Error is in the range -1 to 1 : corresponding to -pi to pi radians (it is the sin(angle/2) which is fairly linear around 0)
-    Vector3f e = qe.coeffs().segment<3>(0); // extract x,y,z part
-
-
-    LOGI("%0.4f %0.4f %0.4f", e[0], e[1], e[2]);
-
-
-
-    float dt = 0.01;
-
-    // Compute derivative
-    Vector3f dE = (e - lastE) / dt;
-    // Integrate
-    totalE += e * dt;
-
-    for(int i = 0; i < 3; i++) {
-        if(totalE[i] > 1)
-            totalE[i] = 1;
-        if(totalE[i] < -1)
-            totalE[i] = -1;
-    }
-
-
-    // Compute control output (desired angular moments that need to be applied)
-    Vector3f control = gP.cwiseProduct(e) + gI.cwiseProduct(totalE) + gD.cwiseProduct(dE);
-
-    // Scaling factor
-    control *= 0.3;
-
-
-
-    // Converts a vector represented in the imu frame into the motor frame
-    // Note: If the phone is mounted differently, then this should be the only thing that needs to change
-    //control = imu2motors * control;
-
-
-    // Compute angle between vertical and adjust thrust
-    float cost = Vector3f(0,0,1).dot(q._transformVector(Vector3f(0,0,1)));
-    float throttle = setthrottle / cost; // The desired throttle
-
-
-
-
-    // Convert to motor speeds
-    float kF = 1.0; // Force/Thrust coefficient
-    float kM = 1.0; // Momentum/Torque coefficient
-    float L = 1.0; // Arm length
-    float s = sin(M_PI / 4.0), c = cos(M_PI / 4.0);
-    Matrix4f dynamics;
-    dynamics << kF, kF, kF, kF, // Thrust
-            kF*L*c, -kF*L*c, -kF*L*c, kF*L*c, // Roll moment
-            -kF*L*s, -kF*L*s, kF*L*s, kF*L*s, // Pitch moment
-            kM, -kM, kM, -kM; // Yaw moment
-
-
-    Vector4f d(throttle, control(0), control(1), control(2));
-
-    // Compute necessary motor controls (computes omega^2 for each motor)
-    Vector4f m = dynamics.inverse() * d;
-
-    float speeds[] = {m[0], m[1], m[2], m[3]};
-
-
-    motor_listener(speeds);
-
-
-    motors_set(speeds);
+	// TODO : TODO: Make sure the state is converted by
+	// The setpoint needs to be converted to body axes, TODO: Do this in start()
+	//Quaternionf target = setpoint * Quaternionf(imu2motors);
+	// Before being sent to compute
 }
-
-
 
 
 
