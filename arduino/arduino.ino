@@ -1,8 +1,5 @@
 
-// NOTE: This currently only supports using a Pro Mini
-// Motors at 3, 9, 10, 11
-
-int pins[] = {10, 11, 3, 9};
+int pins[] = {3, 10, 11, 9};
 #define n 4
 
 #define PWM_LOW 2 // Zero throttle level
