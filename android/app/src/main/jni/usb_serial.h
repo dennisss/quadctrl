@@ -3,6 +3,7 @@
 
 // This is a general single-device
 
+// TODO: Make this thread safe
 
 // Globally initialize the usb drivers
 int usb_serial_init();

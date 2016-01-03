@@ -32,8 +32,10 @@ void motors_destroy(){
 
 }
 
-static unsigned char buf[4];
+static unsigned char buf[5];
 void motors_set(float *speeds){
+
+    buf[0] = 'm';
 
     // Convert to byte size
     for(int i = 0; i < 4; i++){
@@ -43,12 +45,26 @@ void motors_set(float *speeds){
         else if(s < 0)
             s = 0;
 
-        buf[i] = 255*s;
+        buf[1+i] = 255*s;
     }
 
-    int r = usb_serial_write(buf, 4);
+    int r = usb_serial_write(buf, 5);
 
-    if(r != 4){
-        LOGI("failed to write to usb");
+    if(r != 5){
+        LOGI("failed to write to usb %d", r);
     }
+}
+
+double battery_level(){
+    unsigned char c = 'b';
+
+    if(usb_serial_write(&c, 1) != 1){
+        return -1;
+    }
+
+    if(usb_serial_read(&c, 1) != 1){
+        return -1;
+    }
+
+    return ((double)c) / 100.0;
 }

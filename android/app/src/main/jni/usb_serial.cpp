@@ -105,7 +105,7 @@ int usb_serial_open(int vendorId, int productId, int fd){
 
 
         // Set baudrate
-        res = ftdi_set_baudrate(ftdi, 115200);
+        res = ftdi_set_baudrate(ftdi, /* 115200 */ 250000);
         if(res < 0) {
             LOGE("unable to set baudrate: %d (%s)\n", res, ftdi_get_error_string(ftdi));
             return 1;
@@ -191,6 +191,7 @@ int usb_serial_write(unsigned char *buffer, int len){
     }
     else if(_device.driver == USB_DRIVER_FTDI) {
         int f = ftdi_write_data(ftdi, buffer, len);
+        return f;
     }
 
     return written;
@@ -210,7 +211,8 @@ int usb_serial_read(unsigned char *buffer, int len){
         }
     }
     else if(_device.driver == USB_DRIVER_FTDI){
-
+        int f = ftdi_read_data(ftdi, buffer, len);
+        return f;
     }
 
     return read;

@@ -27,7 +27,7 @@ static Model model;
 
 
 static int running = 0;
-static Quaternionf joypoint; // The additional rotation requested by a joystick
+static Quaterniond joypoint; // The additional rotation requested by a joystick
 
 static Vector3f gyro_bias(0,0,0);
 
@@ -35,17 +35,17 @@ static Vector3f gyro_bias(0,0,0);
 
 static odometry_listener listener;
 
-static Matrix3f imu2motors;
+static Matrix3d imu2motors;
 
 
-Quaternionf get_inertial_pose(){
+Quaterniond get_inertial_pose(){
     float buf[4];
     MadgwickAHRSgetquaternion(buf);
-    return Quaternionf(buf[0], buf[1], buf[2], buf[3]) * imu2motors;
+    return Quaterniond(buf[0], buf[1], buf[2], buf[3]);
 }
 
-Quaternionf get_motor_pose(){
-    return get_inertial_pose()*Quaternionf(imu2motors);
+Quaterniond get_motor_pose(){
+    return get_inertial_pose() * Quaterniond(imu2motors);
 }
 
 
@@ -93,9 +93,12 @@ void Quadcopter::destroy(){
 
 void Quadcopter::start(){
 
-    attCtrl.set(0, get_motor_pose());
+    Quaterniond pose = get_motor_pose();
+    Quaterniond hoverpt(sqrt(1 - pose.z()*pose.z()), 0, 0, pose.z()); // Retain only the yaw
 
-    joypoint = Quaternionf(1,0,0,0);
+    attCtrl.set(0, hoverpt);
+
+    joypoint = Quaterniond(1,0,0,0);
 
 	running = 1;
 }
@@ -134,24 +137,22 @@ void Quadcopter::setListener(odometry_listener l){
     listener = l;
 };
 
-void Quadcopter::setThrottle(float t){
-    attCtrl.set(t);
+void Quadcopter::setThrottle(double t){
+    attCtrl.set(t*9.81);
 }
 
-void Quadcopter::joystickInput(Vector3f a){
+void Quadcopter::joystickInput(Vector3d a){
 
-    Matrix3f m;
-    m = AngleAxisf(a[0], Vector3f::UnitX())
-        * AngleAxisf(a[1],  Vector3f::UnitY())
-        * AngleAxisf(a[2], Vector3f::UnitZ());
+    Matrix3d m;
+    m = AngleAxisd(a[0], Vector3d::UnitX())
+        * AngleAxisd(a[1],  Vector3d::UnitY())
+        * AngleAxisd(a[2], Vector3d::UnitZ());
 
-    joypoint = Quaternionf(m);
+    joypoint = Quaterniond(m);
 }
 
-void Quadcopter::setGains(Vector3f p, Vector3f i, Vector3f d){
-	gP = p;
-	gI = i;
-	gD = d;
+void Quadcopter::setGains(Vector3d p, Vector3d i, Vector3d d){
+    attCtrl.setGains(p, i, d);
 }
 
 
@@ -159,6 +160,10 @@ void Quadcopter::setGains(Vector3f p, Vector3f i, Vector3f d){
 static uint64_t last_time = 0; // TODO: Make sure this resets properly
 
 void sensor_feedback(float *acc, float* gyro, uint64_t time){
+
+
+    uint64_t stime = gettime();
+
 
     // Update state
     if(last_time != 0) {
@@ -182,7 +187,7 @@ void sensor_feedback(float *acc, float* gyro, uint64_t time){
 	if(!running)
 		return;
 
-    if(setthrottle < 0.0001) {
+    if(attCtrl.setthrust < 0.0001) {
         float zero[] = {0,0,0,0};
         motors_set(zero);
         return;
@@ -193,7 +198,7 @@ void sensor_feedback(float *acc, float* gyro, uint64_t time){
     // Prepare state
     State s;
     s.orientation = get_motor_pose();
-    s.omega = Vector3d(gyro[0], gyro[1], gyro[2]);
+    s.omega = imu2motors * Vector3d(gyro[0], gyro[1], gyro[2]);
 
     // Compute the necessary control response
     Vector4d m = model.to_motors( attCtrl.compute(s) );
@@ -202,4 +207,9 @@ void sensor_feedback(float *acc, float* gyro, uint64_t time){
     float speeds[] = {m[0], m[1], m[2], m[3]};
     motor_listener(speeds);
     motors_set(speeds);
+
+    uint64_t etime = gettime();
+
+    LOGI("Time to finish: %lld", etime - stime);
+
 }

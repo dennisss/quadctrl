@@ -17,11 +17,14 @@ public:
 
 	Vector4d compute(const State &s);
 
+	void set(double thrust);
 	void set(double thrust, Quaterniond orient);
+
+	void setGains(Vector3d p, Vector3d i, Vector3d d);
 
 	//PID<3> pid;
 
-private:
+//private:
 	double setthrust;
 	Quaterniond setpoint;
 };

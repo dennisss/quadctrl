@@ -16,11 +16,45 @@
 
 */
 
+#include <queue>
 
-void simulate(Model &model, Controller &ctrl);
+using namespace std;
 
 
 class Simulation {
+
+public:
+	Simulation(Model &m, const State &initial);
+
+
+
+	// Evaluate state upto the given time
+	void propagate(double time);
+
+	//
+	void setMotors(Vector4d m);
+
+	// Use the given controller to control the simulatio
+	void run(Controller &ctrl, int freq, double until);
+
+
+
+
+	State state;
+	Model model;
+private:
+
+	Vector4d motors; // Currently set motor speeds
+
+
+	queue<pair<double, Vector4d> > motor_delay;
+
+
+	//Vector3d x; // Linear position
+	//Vector3d v; // Linear velocity
+	//Matrix3d R; // Angular orientation
+	//Vector3d w; // Angular velocity
+
 
 
 };

@@ -6,7 +6,7 @@
 
 using namespace Eigen;
 
-typedef void (*odometry_listener)(Quaternionf quat, uint64_t time);
+typedef void (*odometry_listener)(Quaterniond quat, uint64_t time);
 
 void sensor_feedback(float *acc, float* gyro, uint64_t time);
 
@@ -30,16 +30,16 @@ public:
 	// Can be called any time after init
 	void calibrate();
 
-	void setThrottle(float t);
+	void setThrottle(double t);
 
 	// Angular joystick input
-	void joystickInput(Vector3f a);
+	void joystickInput(Vector3d a);
 
 
 	void setListener(odometry_listener l);
 
 
-	void setGains(Vector3f p, Vector3f i, Vector3f d);
+	void setGains(Vector3d p, Vector3d i, Vector3d d);
 
 
 

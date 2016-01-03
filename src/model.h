@@ -28,6 +28,8 @@ public:
 	double mass;
 	double weight;
 
+	Matrix3d mInertia;
+
 private:
 	// Convert motor speeds to thrust/torques
 	Matrix4d dynamics;

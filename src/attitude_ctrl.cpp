@@ -1,14 +1,18 @@
 #include "attitude_ctrl.h"
 
+#include <iostream>
+
+using namespace std;
+
 
 static Vector3d lastE(0,0,0); // Used for computing derivative
 static Vector3d totalE(0,0,0); // Used for tracking the integral
 
 // Weights/gains for PID filter
 // Order: (roll around x), (pitch around y), (yaw around z)
-static Vector3d gP(3, 3, 3);
-static Vector3d gI(0.5, 0.5, 0.5);
-static Vector3d gD(0, 0, 0);
+static Vector3d gP(5, 5, 0);
+static Vector3d gI(0, 0, 0);
+static Vector3d gD(0.3, 0.3, 0);
 
 AttitudeControl::AttitudeControl(){
 	setpoint = Quaterniond(1,0,0,0);
@@ -34,7 +38,7 @@ Vector4d AttitudeControl::compute(const State &s){
 
 
 
-	double dt = 0.001; //0.01;
+	double dt = 0.01; //0.001; //0.01;
 
 	// Compute derivative
 	Vector3d dE = (e - lastE) / dt;
@@ -51,7 +55,7 @@ Vector4d AttitudeControl::compute(const State &s){
 
 
 	// Compute control output (desired angular moments that need to be applied)
-	Vector3d control = gP.cwiseProduct(e) + gI.cwiseProduct(totalE) + gD.cwiseProduct( -s.omega /* dE */);
+	Vector3d control = gP.cwiseProduct(e) + gI.cwiseProduct(totalE) + gD.cwiseProduct( dE );
 
 
 	// Compute angle between vertical and adjust thrust
@@ -59,9 +63,15 @@ Vector4d AttitudeControl::compute(const State &s){
 //	double throttle = setthrottle / cost; // The desired throttle
 
 
+	lastE = e;
 
 
 	return Vector4d(setthrust, control(0), control(1), control(2));
+}
+
+void AttitudeControl::set(double thrust){
+	//set(thrust, this->setpoint);
+	this->setthrust = thrust;
 }
 
 void AttitudeControl::set(double thrust, Quaterniond orient){
@@ -70,4 +80,11 @@ void AttitudeControl::set(double thrust, Quaterniond orient){
 
 	lastE = Vector3d(0,0,0);
 	totalE = Vector3d(0,0,0);
+}
+
+
+void AttitudeControl::setGains(Vector3d p, Vector3d i, Vector3d d){
+	gP = p;
+	gI = i;
+	gD = d;
 }

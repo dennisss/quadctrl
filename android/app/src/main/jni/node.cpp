@@ -15,6 +15,10 @@
 using namespace std;
 
 
+
+#include "usb_serial.h"
+#include "inertial.h"
+
 ros::NodeHandle *handle;
 ros::AsyncSpinner *spinner;
 
@@ -50,7 +54,7 @@ void motor_listener(float *speeds){
 
 
 // Send poses
-void pose_listener(Quaternionf q, uint64_t time){
+void pose_listener(Quaterniond q, uint64_t time){
 
 	geometry_msgs::PoseStamped msg;
 
@@ -70,8 +74,8 @@ void pose_listener(Quaternionf q, uint64_t time){
 // Receive commands
 void setpose_callback(const geometry_msgs::Twist::ConstPtr &msg) {
     //ROS_INFO("I heard: [%s]", msg->data.c_str());
-	quad.setThrottle((float) msg->linear.z);
-	quad.joystickInput(Vector3f(msg->angular.x, msg->angular.y, msg->angular.z));
+	quad.setThrottle(msg->linear.z);
+	quad.joystickInput(Vector3d(msg->angular.x, msg->angular.y, msg->angular.z));
 	LOGI("Set throttle %f", msg->linear.z);
 }
 
@@ -135,14 +139,14 @@ JNIEXPORT void JNICALL Java_me_denniss_quadctrl_ControlNode_destroy(JNIEnv *env,
 
 
 JNIEXPORT void JNICALL Java_me_denniss_quadctrl_ControlNode_start(JNIEnv *env, jobject obj) {
-	vector<float> gP, gI, gD;
+	vector<double> gP, gI, gD;
 	if(handle->getParam("/gains/p", gP)
 	   && handle->getParam("/gains/i", gI)
 	   && handle->getParam("/gains/d", gD)){
 		quad.setGains(
-			Vector3f(gP[0], gP[1], gP[2]),
-			Vector3f(gI[0], gI[1], gI[2]),
-			Vector3f(gD[0], gD[1], gD[2])
+			Vector3d(gP[0], gP[1], gP[2]),
+			Vector3d(gI[0], gI[1], gI[2]),
+			Vector3d(gD[0], gD[1], gD[2])
 		);
 	}
 
@@ -172,6 +176,24 @@ JNIEXPORT void Java_me_denniss_quadctrl_ControlNode_setMotors(JNIEnv *env, jobje
     motors_set(buf);
 }
 
+
+JNIEXPORT double JNICALL Java_me_denniss_quadctrl_ControlNode_testio(JNIEnv *env, jobject obj) {
+
+	for(int i = 0; i < 10; i++){
+		uint64_t stime = gettime();
+
+		char buff[] = {'a', 'b', 'c', 'd', 0};
+
+		usb_serial_write((unsigned char *)buff, 4);
+		usb_serial_read((unsigned char *)buff, 4);
+
+
+		uint64_t etime = gettime();
+
+		LOGI("Round trip: %lld %s", etime - stime, buff);
+		usleep(100000);
+	}
+}
 
 
 #ifdef __cplusplus

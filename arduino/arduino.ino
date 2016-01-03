@@ -31,7 +31,7 @@ void setup() {
   delay(1000);
 
 
-  Serial.begin(115200);
+  Serial.begin(250000);
   while(!Serial){ // Wait for serial to be configured
     ;
   }
@@ -47,18 +47,30 @@ void fail(){
     analogWrite(pins[i], PWM_LOW);
 }
 
+char cmd;
 byte buffer[n];
 void loop(){
-
-  if(Serial.readBytes((char *)buffer, n) != n){
+  
+  if(Serial.readBytes(&cmd, 1) != 1){
     fail();
     return;
   }
 
-  for(int i = 0; i < n; i++){
-    int c = buffer[i];
-    c = PWM_LOW + ((float)(c / 255.0))*(PWM_HIGH - PWM_LOW);
-    analogWrite(pins[i], c);
+  if(cmd == 'b'){
+    byte x = batt_level() * 100;
+    Serial.write(x);
+  }
+  else if(cmd = 'm'){
+    if(Serial.readBytes((char *)buffer, n) != n){
+        fail();
+        return;
+    }
+    
+    // TODO: Try to round the fractional
+    for(int i = 0; i < n; i++){
+      int c = map(buffer[i], 0, 255, PWM_LOW, PWM_HIGH);
+      analogWrite(pins[i], c);
+    }
   }
 }
 

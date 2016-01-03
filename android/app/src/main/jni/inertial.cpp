@@ -28,7 +28,7 @@ static uint64_t getrealtime(){
 	return (uint64_t) now.tv_nsec + ((uint64_t) now.tv_sec * 1000000000);
 }
 
-static uint64_t gettime(){
+uint64_t gettime(){
 	struct timespec now;
 	clock_gettime(CLOCK_MONOTONIC_RAW, &now);
 	return (uint64_t) now.tv_nsec + ((uint64_t) now.tv_sec * 1000000000);

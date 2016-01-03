@@ -23,6 +23,8 @@ public class ControlNode {
 	public static native void calibrate();
 
 
+	public static native double testio();
+
 	public static native void setMotors(float[] speeds);
 
 }

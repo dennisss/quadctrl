@@ -15,7 +15,7 @@ void inertial_disable(); // Call when you want to stop reading
 void inertial_setlistener(inertial_listener listener);
 
 
-
+uint64_t gettime();
 
 
 #endif

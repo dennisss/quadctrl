@@ -32,3 +32,21 @@ add_executable(test
 
 set_target_properties(test PROPERTIES COMPILE_FLAGS "-std=c++11 -w -g -O3") #  -g
 target_link_libraries(test quadctrl)
+
+
+
+find_package(roscpp REQUIRED)
+
+include_directories(${roscpp_INCLUDE_DIRS})
+
+
+add_executable(sim
+	src/rsim.cpp
+)
+target_link_libraries(sim ${roscpp_LIBRARIES} quadctrl)
+
+
+add_executable(simrun
+	src/simrun.cpp
+)
+target_link_libraries(simrun ${roscpp_LIBRARIES} quadctrl)

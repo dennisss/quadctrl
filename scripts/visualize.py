@@ -89,6 +89,9 @@ def draw(q,t): # [w, x, y, z] quaternion
         vec = np.dot(Rt, m.transpose())
         ax.plot(vec[0,:].tolist()[0], vec[1,:].tolist()[0], vec[2,:].tolist()[0], 'b-' if j < 2 else 'r-')
 
+
+    ax.plot([0,0], [0,0], [-5, 5], 'k-')
+
     # Draw quad
     #ax.plot([-2, 2], [-2, 2], [0, 0], 'k-')
     #ax.plot([-2, 2], [2, -2], [0, 0], 'k-')
