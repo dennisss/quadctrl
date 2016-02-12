@@ -111,6 +111,13 @@ int usb_serial_open(int vendorId, int productId, int fd){
             return 1;
         }
 
+
+        res = ftdi_set_latency_timer(ftdi, 1);
+        if(res < 0) {
+            LOGE("unable to set latency timer: %d (%s)\n", res, ftdi_get_error_string(ftdi));
+            return 1;
+        }
+
     }
     else{ // Use CDC-ACM driver
         _device.driver = USB_DRIVER_CDC_ACM;

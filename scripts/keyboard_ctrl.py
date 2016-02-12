@@ -4,16 +4,31 @@
 
 import rospy
 import curses
+from std_srvs.srv import *
 
 from geometry_msgs.msg import * # Vector3 and twist
 
 rospy.init_node('robot_ctrl', anonymous=True)
 pub = rospy.Publisher('/setpoint', Twist, queue_size=1)
 
+# Errors will be between -1 and 1 (for -pi to pi)
+# Single axis torque limit of 1.56 (two axis limit of ~0.7)
+rospy.set_param('gains/p', [0.83, 0.83, 0.12]) # < 10
+rospy.set_param('gains/i', [0.1, 0.1, 0])
+rospy.set_param('gains/d', [0.11, 0.11, 0]) # definately <0.8
 
-rospy.set_param('gains/p', [10, 10, 10])
-rospy.set_param('gains/i', [4, 4, 0])
-rospy.set_param('gains/d', [0, 0, 0])
+# 0.95
+# 0
+# 0.16
+
+
+# Tell the
+rospy.wait_for_service('/configure')
+configure = rospy.ServiceProxy('/configure', Empty)
+try:
+    configure()
+except rospy.ServiceException as exc:
+    print("Service did not process request: " + str(exc))
 
 
 
@@ -44,10 +59,10 @@ while True:
 
     stdscr.refresh()
     if key == curses.KEY_UP:
-        throttle = throttle + 0.4
+        throttle = throttle + 0.1 #0.1
         dirty = True
     elif key == curses.KEY_DOWN:
-        throttle = throttle - 0.4
+        throttle = throttle - 0.1
         dirty = True
     elif key == ord('w'):
         rotation[1] = rotation[1] + 0.05

@@ -8,7 +8,11 @@
 
 CMakeFiles
 CMakeCache.txt
-Makefile
+#Makefile
 cmake_install.cmake
 
-bin/
+build/
+
+# EagleCAD temp files
+*.s#[1-9]
+*.b#[1-9]

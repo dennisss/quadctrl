@@ -10,9 +10,9 @@ static Vector3d totalE(0,0,0); // Used for tracking the integral
 
 // Weights/gains for PID filter
 // Order: (roll around x), (pitch around y), (yaw around z)
-static Vector3d gP(5, 5, 0);
+static Vector3d gP(2, 2, 0);
 static Vector3d gI(0, 0, 0);
-static Vector3d gD(0.3, 0.3, 0);
+static Vector3d gD(0, 0, 0);
 
 AttitudeControl::AttitudeControl(){
 	setpoint = Quaterniond(1,0,0,0);
@@ -36,7 +36,7 @@ Vector4d AttitudeControl::compute(const State &s){
 	Vector3d e = qe.coeffs().segment<3>(0); // extract x,y,z part
 
 
-
+	debug_error = e;
 
 	double dt = 0.01; //0.001; //0.01;
 
@@ -74,6 +74,10 @@ void AttitudeControl::set(double thrust){
 	this->setthrust = thrust;
 }
 
+void AttitudeControl::set(Quaterniond orient){
+	this->set(this->setthrust, orient);
+}
+
 void AttitudeControl::set(double thrust, Quaterniond orient){
 	this->setthrust = thrust;
 	this->setpoint = orient;
@@ -81,6 +85,8 @@ void AttitudeControl::set(double thrust, Quaterniond orient){
 	lastE = Vector3d(0,0,0);
 	totalE = Vector3d(0,0,0);
 }
+
+
 
 
 void AttitudeControl::setGains(Vector3d p, Vector3d i, Vector3d d){

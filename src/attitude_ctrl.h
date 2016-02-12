@@ -19,8 +19,11 @@ public:
 
 	void set(double thrust);
 	void set(double thrust, Quaterniond orient);
+	void set(Quaterniond orient);
 
 	void setGains(Vector3d p, Vector3d i, Vector3d d);
+
+	Vector3d debug_error;
 
 	//PID<3> pid;
 

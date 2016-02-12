@@ -70,7 +70,8 @@ public class MainActivity extends Activity
 
         Log.i("MainActivity", myip);
 
-		ControlNode.init("http://192.168.0.194:11311", myip);
+
+		ControlNode.init("http://144.118.54.124:11311", myip);
 
 
 
@@ -107,6 +108,7 @@ public class MainActivity extends Activity
 
             Toast toast = Toast.makeText(getApplicationContext(), "USB Motors Connected!", Toast.LENGTH_LONG);
             toast.show();
+
         }
 
     }

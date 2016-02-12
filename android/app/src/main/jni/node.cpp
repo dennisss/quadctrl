@@ -7,6 +7,7 @@
 #include "geometry_msgs/PoseStamped.h"
 #include "geometry_msgs/Twist.h"
 #include "std_msgs/Float32MultiArray.h"
+#include "std_srvs/Empty.h"
 
 #include "quadcopter.h"
 #include "log.h"
@@ -24,6 +25,7 @@ ros::AsyncSpinner *spinner;
 
 ros::Publisher pose_pub, motor_pub;
 ros::Subscriber set_sub;
+ros::ServiceServer configure_service;
 
 static Quadcopter quad;
 
@@ -80,6 +82,24 @@ void setpose_callback(const geometry_msgs::Twist::ConstPtr &msg) {
 }
 
 
+bool configure_callback(std_srvs::Empty::Request& request, std_srvs::Empty::Response& response) {
+
+	vector<double> gP, gI, gD;
+	if(handle->getParam("/gains/p", gP)
+	   && handle->getParam("/gains/i", gI)
+	   && handle->getParam("/gains/d", gD)){
+		quad.setGains(
+				Vector3d(gP[0], gP[1], gP[2]),
+				Vector3d(gI[0], gI[1], gI[2]),
+				Vector3d(gD[0], gD[1], gD[2])
+		);
+	}
+
+	return true;
+}
+
+
+
 
 
 #ifdef __cplusplus
@@ -119,6 +139,8 @@ JNIEXPORT void JNICALL Java_me_denniss_quadctrl_ControlNode_init(JNIEnv *env, jo
 
     set_sub = handle->subscribe("/setpoint", 1000, setpose_callback);
 
+	configure_service = handle->advertiseService("/configure", configure_callback);
+
 
 	spinner = new ros::AsyncSpinner(1);
 	spinner->start();
@@ -139,17 +161,6 @@ JNIEXPORT void JNICALL Java_me_denniss_quadctrl_ControlNode_destroy(JNIEnv *env,
 
 
 JNIEXPORT void JNICALL Java_me_denniss_quadctrl_ControlNode_start(JNIEnv *env, jobject obj) {
-	vector<double> gP, gI, gD;
-	if(handle->getParam("/gains/p", gP)
-	   && handle->getParam("/gains/i", gI)
-	   && handle->getParam("/gains/d", gD)){
-		quad.setGains(
-			Vector3d(gP[0], gP[1], gP[2]),
-			Vector3d(gI[0], gI[1], gI[2]),
-			Vector3d(gD[0], gD[1], gD[2])
-		);
-	}
-
 	quad.start();
 }
 

@@ -94,7 +94,8 @@ void Quadcopter::destroy(){
 void Quadcopter::start(){
 
     Quaterniond pose = get_motor_pose();
-    Quaterniond hoverpt(sqrt(1 - pose.z()*pose.z()), 0, 0, pose.z()); // Retain only the yaw
+    hoverpt = Quaterniond(pose.w(), 0, 0, pose.z()); // Retain only the yaw
+    hoverpt.normalize();
 
     attCtrl.set(0, hoverpt);
 
@@ -149,6 +150,8 @@ void Quadcopter::joystickInput(Vector3d a){
         * AngleAxisd(a[2], Vector3d::UnitZ());
 
     joypoint = Quaterniond(m);
+
+    attCtrl.set(hoverpt*joypoint);
 }
 
 void Quadcopter::setGains(Vector3d p, Vector3d i, Vector3d d){
@@ -203,13 +206,16 @@ void sensor_feedback(float *acc, float* gyro, uint64_t time){
     // Compute the necessary control response
     Vector4d m = model.to_motors( attCtrl.compute(s) );
 
+
     // Set the motors
     float speeds[] = {m[0], m[1], m[2], m[3]};
-    motor_listener(speeds);
     motors_set(speeds);
+    motor_listener(speeds);
 
     uint64_t etime = gettime();
 
-    LOGI("Time to finish: %lld", etime - stime);
+    LOGI("%.4f %.4f %.4f ", attCtrl.debug_error(0), attCtrl.debug_error(1), attCtrl.debug_error(2));
+
+    //LOGI("Time to finish: %lld", etime - stime);
 
 }

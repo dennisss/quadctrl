@@ -8,6 +8,60 @@ Quadcopter Controller
 
 
 
+
+Useful Commands
+---------------
+
+- For creating an access point on a linux machine (requires create\_ap)
+	- `sudo create_ap -n wlp3s0 MyAP helloworld`
+
+
+- Starting up the controller
+	- `ROS_IP=192.168.12.1 ROS_HOSTNAME=192.168.12.1 ./scripts/keyboard_ctrl.py`
+
+
+- Checkout "Sharing internet connection over Ethernet" under https://wiki.archlinux.org/index.php/NetworkManager
+
+- See `ext/cores/teensy3` for Teensy3 makefile example
+
+
+- Programming AfroESCs: `make program_tgy_afro_nfet.0` via usb pwm programmer
+
+Builds
+------
+
+Below are descriptions of each of the builds:
+
+- `dancer`
+	- High performance acrobatic quadrotor for perfroming live performances as a dancer
+	- Currently uses a Teensy 3 as an onboard controller with I2C
+		- Teensy libraries need to be downloaded @ https://github.com/PaulStoffregen/cores
+			- On Archlinux this requires the `arm-none-eabi-gcc` package for compiling
+		- ESCs used are the AfroESC 20A slims with I2C wiring
+			- Teensy I2C Lib: https://forum.pjrc.com/threads/21680-New-I2C-library-for-Teensy3
+		- Firmware for ESCS: https://github.com/balrog-kun/tgy
+			- http://www.rcgroups.com/forums/showthread.php?t=1955848
+			- http://www.rcgroups.com/forums/showthread.php?t=2032252
+
+
+
+Libraries Used
+--------------
+
+
+- XBee Support via `https://github.com/attie/libxbee3`
+	- Needs to be compiled with escaping mode enabled
+- Arduino/Teensy version @ `https://github.com/andrewrapp/xbee-arduino`
+- I2C Library: `https://github.com/jrowberg/i2cdevlib.git`
+- I2C Teensy Addon: `https://github.com/nox771/i2c_t3`
+
+- OGRE into QT5
+	- http://www.ogre3d.org/tikiwiki/tiki-index.php?page=Integrating+Ogre+into+QT5
+
+
+
+
+
 Android
 -------
 
@@ -21,3 +75,7 @@ Included is a fully functional Android implementation of the controller which ca
 - Uses custom versions of libftdi and libusb (included)
 
 - For compiling, you need to separately compile `roscpp_android_ndk` and place it in the `ext` folfer
+
+- TODO: Add video streaming
+	- Combine the native mvision code using the capture request to go to many places.
+	- One of which should be like https://github.com/fyhertz/libstreaming

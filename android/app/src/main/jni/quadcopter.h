@@ -41,6 +41,10 @@ public:
 
 	void setGains(Vector3d p, Vector3d i, Vector3d d);
 
+private:
+
+	Quaterniond hoverpt;
+
 
 
 };

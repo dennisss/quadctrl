@@ -132,7 +132,7 @@ void Simulation::run(Controller &ctrl, int freq, double until){
 		this->propagate(t);
 
 		//Vector3d eu = state.orientation.matrix().eulerAngles(0, 1, 2);
-		cout << t << " " << state.orientation.y() << endl;
+		cout << t << " " << state.orientation.x() << " " << state.orientation.y() << " " << state.orientation.z() << endl;
 
 	}
 
