@@ -30,7 +30,7 @@ add_library(quadctrl SHARED
 	src/simulate.cpp
 	src/attitude_ctrl.cpp
 	src/pid.cpp
-	src/position_ctrl.cpp
+#	src/position_ctrl.cpp
 	src/MadgwickAHRS.cpp
 )
 set_target_properties(quadctrl PROPERTIES COMPILE_FLAGS "-std=c++11 -w -g -O3") #  -g
@@ -72,6 +72,9 @@ endif()
 
 if(BUILD_CREATOR)
 	add_subdirectory(src/creator)
+
+	add_subdirectory(src/drivers)
+
 endif()
 
 if(BUILD_ONBOARD)
