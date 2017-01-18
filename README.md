@@ -1,7 +1,28 @@
 Quadcopter Controller
 =====================
 
+**Deprecated: I'm keeping this up as it contains many good notes and code snippets for Android. Should you want a more complete and maintained platform, see https://github.com/dennisss/tansa**
+
+
+TODO:
+-----
+
+- Move networking/xbee code out of 'creator'
+- Abstract remote quadcopters as a ros node with a common command interface
+- So, say have a Quadcopter class: a RosQuadcopter would be an implementation of that
+
+
+Overview
+--------
+
 - An implementation of many common quadcopter control and modeling things
+
+- An onboard controller with XBee support
+
+- A GUI for controlling quadcopters from an XBee connected computer
+
+- Support for motion capture systems
+	- Drivers included for OptiTrack Motive
 
 - Position and attitude control based on
 	- `Minimum Snap Trajectory Generation and Control for Quadrotors` by Daniel Mellinger and Vijay Kumar
@@ -22,10 +43,30 @@ Useful Commands
 
 - Checkout "Sharing internet connection over Ethernet" under https://wiki.archlinux.org/index.php/NetworkManager
 
+	Scenario: your device has internet connection over wi-fi and you want to share the internet connection to other devices over ethernet.
+	Requirements:
+	Install the dnsmasq package to be able to actually share the connection.
+	You internet connected device and the other devices are connected over a suitable ethernet cable (this usually means a cross over cable or a switch in between).
+	Steps:
+	Run nm-connection-editor from terminal.
+	Add a new ethernet connection.
+	Give it some sensible name. For example "Shared Internet"
+	Go to "IPv4 Settings".
+	For "Method:" select "Shared to other computers".
+	Save
+	Now you should have a new option "Shared Internet" under the Wired connections in NetworkManager.
+
+
+
 - See `ext/cores/teensy3` for Teensy3 makefile example
 
 
 - Programming AfroESCs: `make program_tgy_afro_nfet.0` via usb pwm programmer
+
+
+- A good read for multicast implementation
+	- http://www.tldp.org/HOWTO/Multicast-HOWTO-6.html
+
 
 Builds
 ------
@@ -59,6 +100,14 @@ Libraries Used
 	- http://www.ogre3d.org/tikiwiki/tiki-index.php?page=Integrating+Ogre+into+QT5
 
 
+
+
+Drivers
+-------
+
+- OptiTrack
+	- Included is a driver for interfacing with OptiTrack Motive 1.9.0 via the NatNet SDK 2.9.0
+	- Unix implementation of the NatNetClient with same interface as the SDK
 
 
 
